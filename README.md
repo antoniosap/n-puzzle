@@ -41,7 +41,7 @@ or use `-ida` for **IDA\***
 `-s zero_first` (blank tile first)
 
 ```
-4
+4 4
 00 01 02 03
 04 05 06 07
 08 09 10 11
@@ -51,7 +51,7 @@ or use `-ida` for **IDA\***
 
 `-s zero_last` (blank tile last)
 ```
-4
+4 4
 01 02 03 04
 05 06 07 08
 09 10 11 12
@@ -60,7 +60,7 @@ or use `-ida` for **IDA\***
 
 `-s snail` (default, spiral pattern)
 ```
-4
+4 4
 01 02 03 04
 12 13 14 05
 11 00 15 06
