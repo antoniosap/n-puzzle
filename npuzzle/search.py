@@ -12,34 +12,34 @@ def clone_and_swap(data,y0,y1):
     clone[y1] = tmp
     return tuple(clone)
 
-def possible_moves(data, size):
+def possible_moves(data, size_rows, size_cols):
     res = []
     y = data.index(EMPTY_TILE)
-    if y % size > 0:
+    if y % size_rows > 0:
         left = clone_and_swap(data,y,y-1)
         res.append(left)
-    if y % size + 1 < size:
+    if y % size_rows + 1 < size_rows:
         right = clone_and_swap(data,y,y+1)
         res.append(right)
-    if y - size >= 0:
-        up = clone_and_swap(data,y,y-size)
+    if y - size_cols >= 0:
+        up = clone_and_swap(data,y,y-size_cols)
         res.append(up)
-    if y + size < len(data):
-        down = clone_and_swap(data,y,y+size)
+    if y + size_cols < len(data):
+        down = clone_and_swap(data,y,y+size_cols)
         res.append(down)
     return res
 
-def ida_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
+def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
     def search(path, g, bound, evaluated):
         evaluated += 1
         node = path[0]
-        f = g + HEURISTIC(node, solved, size)
+        f = g + HEURISTIC(node, solved, size_rows, size_cols)
         if f > bound:
             return f, evaluated
         if node == solved:
             return True, evaluated
         ret = inf
-        moves = possible_moves(node, size)
+        moves = possible_moves(node, size_rows, size_cols)
         for m in moves:
             if m not in path:
                 path.appendleft(m)
@@ -51,7 +51,7 @@ def ida_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
                 path.popleft()
         return ret, evaluated
 
-    bound = HEURISTIC(puzzle, solved, size)
+    bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
     path = deque([puzzle])
     evaluated = 0
     while path:
@@ -64,7 +64,7 @@ def ida_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
         else:
             bound = t
 
-def a_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
+def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
     c = count()
     queue = [(0, next(c), puzzle, 0, None)]
     open_set = {}
@@ -82,7 +82,7 @@ def a_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
             continue
         closed_set[node] = parent
         tentative_g = node_g + TRANSITION_COST
-        moves = possible_moves(node, size)
+        moves = possible_moves(node, size_rows, size_cols)
         for m in moves:
             if m in closed_set:
                 continue
@@ -91,7 +91,7 @@ def a_star_search(puzzle, solved, size, HEURISTIC, TRANSITION_COST):
                 if move_g <= tentative_g:
                     continue
             else:                
-                move_h = HEURISTIC(m, solved, size)
+                move_h = HEURISTIC(m, solved, size_rows, size_cols)
             open_set[m] = tentative_g, move_h
             heappush(queue, (move_h + tentative_g, next(c), m, tentative_g, node))
     return (False, [], {'space':len(open_set), 'time':len(closed_set)})

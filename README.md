@@ -1,4 +1,4 @@
-# n-puzzle @ 42 fremont
+# n-puzzle row * col version
 
 ```
 usage: solver.py [-h] [-c] [-ida] [-g] [-u]
