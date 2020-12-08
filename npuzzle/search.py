@@ -40,7 +40,8 @@ def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_
 			return f, evaluated
 		if node == solved:
 			return True, evaluated
-		# print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
+		if evaluated % 500000 == 0:
+			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
 		ret = inf
 		moves = possible_moves(node, size_rows, size_cols)
 		for m in moves:

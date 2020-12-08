@@ -74,6 +74,10 @@ def gui_close(event):
 	exit(0)
 
 
+def gui_refresh(master, canvas, item_matrix, solution, size_rows, size_cols):
+	master.after(GUI_DELAY, gui_replay, master, canvas, item_matrix, solution, size_rows, size_cols)
+
+
 def gui_item_matrix(canvas, size_rows, size_cols):
 	item_matrix = [[[None, None] for x in range(size_rows)] for y in range(size_cols)]
 	for y in range(size_cols):
@@ -101,6 +105,7 @@ def visualizer(solution, size_rows, size_cols):
 	master.bind('<Escape>', gui_close)
 	master.bind('<Q>', gui_close)
 	master.bind('<q>', gui_close)
+	master.bind('<r>', lambda i: gui_refresh(master, canvas, item_matrix, solution, size_rows, size_cols))
 	master.after(0, gui_replay, master, canvas, item_matrix, solution, size_rows, size_cols)
 	if platform_system() == 'Darwin':
 		system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "''' + basename(executable) + '''" to true' ''')

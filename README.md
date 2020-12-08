@@ -27,8 +27,8 @@ optional arguments:
 
 #### examples:
 
-- python/pypy main.py -s zero_last in_3x4.txt -p -v
-- python/pypy main.py -s zero_last in_4x6.txt -p
+- python/pypy main.py -s zero_last in_3x4.txt -pvc
+- python/pypy main.py -s zero_last in_4x6.txt -pvc -ida
 - python/pypy main.py -s zero_last in_4x8.txt -p -v -ida -f conflicts
 
 #### search:
