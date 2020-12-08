@@ -73,7 +73,7 @@ def linear_conflicts(candidate, solved, size_rows, size_cols):
 	solved_columns = [[] for x in range(size_cols)]
 	for y in range(size_rows):
 		for x in range(size_cols):
-			idx = (y * size_rows) + x
+			idx = (y * size_cols) + x
 			candidate_rows[y].append(candidate[idx])
 			candidate_columns[x].append(candidate[idx])
 			solved_rows[y].append(solved[idx])

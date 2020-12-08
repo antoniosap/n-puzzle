@@ -31,8 +31,8 @@ def gui_replay(master, canvas, item_matrix, solution, size_rows, size_cols):
 	if GUI_FRAME_INDEX + 1 < len(solution):
 		next_zero = solution[GUI_FRAME_INDEX + 1].index(0)
 		color_this = solution[GUI_FRAME_INDEX][next_zero]
-	for y in range(size_rows + 1):
-		for x in range(size_cols - 1):
+	for y in range(size_cols):
+		for x in range(size_rows):
 			n = numbers[y + size_cols * x]
 			BORDER_COLOR = None
 			if n == solution[-1][y + size_cols * x]:

@@ -1,3 +1,4 @@
+import sys
 from itertools import count
 from heapq import heappush, heappop
 from collections import deque
@@ -39,7 +40,7 @@ def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_
 			return f, evaluated
 		if node == solved:
 			return True, evaluated
-		print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
+		# print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
 		ret = inf
 		moves = possible_moves(node, size_rows, size_cols)
 		for m in moves:
@@ -84,7 +85,7 @@ def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_CO
 			continue
 		closed_set[node] = parent
 		tentative_g = node_g + TRANSITION_COST
-		print(color('yellow', "tentative_g: {} queue len: {}".format(tentative_g, len(queue))))
+		# print(color('yellow', "tentative_g: {} queue len: {}".format(tentative_g, len(queue))))
 		moves = possible_moves(node, size_rows, size_cols)
 		for m in moves:
 			if m in closed_set:
