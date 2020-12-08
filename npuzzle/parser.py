@@ -31,7 +31,7 @@ def is_valid_input(data):
 
 
 def get_input():
-	parser = argparse.ArgumentParser(description='n-puzzle @ 42 fremont')
+	parser = argparse.ArgumentParser(description='n-puzzle m * n')
 	parser.add_argument('-c', action='store_true', help='colors')
 	parser.add_argument('-ida', action='store_true', help='ida* search')
 	parser.add_argument('-g', action='store_true', help='greedy search')

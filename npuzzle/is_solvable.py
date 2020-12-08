@@ -13,6 +13,10 @@ def count_inversions(puzzle, solved, size_rows, size_cols):
 
 
 def is_solvable(puzzle, solved, size_rows, size_cols):
+	return True
+	#
+	# il criterio non funziona per n * m
+	#
 	inversions = count_inversions(puzzle, solved, size_rows, size_cols)
 	puzzle_zero_row = puzzle.index(EMPTY_TILE) // (size_rows * size_cols)
 	puzzle_zero_column = puzzle.index(EMPTY_TILE) % (size_rows * size_cols)

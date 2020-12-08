@@ -13,8 +13,8 @@ from npuzzle import heuristics
 from npuzzle import solved_states
 
 
-def pretty_print_steps(steps, size):
-	width = len(str(size * size))
+def pretty_print_steps(steps, size_rows, size_cols):
+	width = len(str(size_rows * size_cols))
 	decor = '-'
 	for n in range(len(steps)):
 		if n == 0:
@@ -22,9 +22,9 @@ def pretty_print_steps(steps, size):
 		else:
 			print('-[step %2d]%s' % (n, 10 * decor,))
 		print()
-		for i in range(size):
-			for j in range(size):
-				tile = str(steps[n][i * size + j])
+		for i in range(size_rows):
+			for j in range(size_cols):
+				tile = str(steps[n][i * size_cols + j])
 				if tile == '0':
 					tile = color('red2', '-' * width)
 				print(' %*s' % (width, tile), end='')
@@ -56,7 +56,7 @@ def verbose_info(args, puzzle, solved, size_rows, size_cols):
 
 	print(color('blue2', 'heuristic scores for initial state'))
 	for k, v in heuristics.KV.items():
-		print(color('blue2', '  - ' + k + '\t:'), v(puzzle, solved, size_rows, size_cols))
+		print(color('blue2', '  - {:10s}: {}'.format(k, v(puzzle, solved, size_rows, size_cols))))
 
 	print(color('red2', 'search algorithm:'), 'IDA*' if args.ida else 'A*')
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
 		print(color('green', 'length of solution:'), max(len(steps) - 1, 0))
 		print(color('green', 'initial state and solution steps:'))
 		if args.p:
-			pretty_print_steps(steps, size)
+			pretty_print_steps(steps, size_rows, size_cols)
 		else:
 			for s in steps:
 				print(s)
@@ -118,4 +118,4 @@ if __name__ == '__main__':
 	print(color('magenta', 'space complexity:'), complexity['space'], 'nodes in memory')
 	print(color('magenta', 'time complexity:'), complexity['time'], 'evaluated nodes')
 	if success and args.v:
-		visualizer(steps, size)
+		visualizer(steps, size_rows, size_cols)
