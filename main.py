@@ -27,7 +27,7 @@ def pretty_print_steps(steps, size_rows, size_cols):
 				tile = str(steps[n][i * size_cols + j])
 				if tile == '0':
 					tile = color('red2', '-' * width)
-				print(' %*s' % (width, tile), end='')
+				sys.stdout.write(' %*s' % (width, tile))
 			print()
 		print()
 	print('%s' % (20 * decor,))
