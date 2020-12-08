@@ -2,7 +2,7 @@
 
 import sys
 import resource
-from time import perf_counter
+import time
 from npuzzle.visualizer import visualizer
 from npuzzle.search import a_star_search, ida_star_search
 from npuzzle.is_solvable import is_solvable
@@ -91,12 +91,12 @@ if __name__ == '__main__':
 	maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 	print(color('red', 'max rss before search:'), maxrss)
 
-	t_start = perf_counter()
+	t_start = time.time()
 	if args.ida:
 		res = ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
 	else:
 		res = a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
-	t_delta = perf_counter() - t_start
+	t_delta = time.time() - t_start
 
 	maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 	print(color('red', 'max rss after search: '), maxrss)
