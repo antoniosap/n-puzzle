@@ -3,6 +3,7 @@ from itertools import count
 from heapq import heappush, heappop
 from collections import deque
 from math import inf
+import ray
 from npuzzle.colors import color
 
 EMPTY_TILE = 0
@@ -35,7 +36,7 @@ def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_
 	def search(path, g, bound, evaluated):
 		evaluated += 1
 		node = path[0]
-		f = g + HEURISTIC(node, solved, size_rows, size_cols)
+		f = g + ray.get(HEURISTIC.remote(node, solved, size_rows, size_cols))
 		if f > bound:
 			return f, evaluated
 		if node == solved:
@@ -55,7 +56,7 @@ def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_
 				path.popleft()
 		return ret, evaluated
 
-	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
+	bound = ray.get(HEURISTIC.remote(puzzle, solved, size_rows, size_cols))
 	path = deque([puzzle])
 	evaluated = 0
 	while path:

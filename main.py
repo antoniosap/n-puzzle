@@ -3,6 +3,7 @@
 import sys
 import resource
 import time
+import ray
 from npuzzle.visualizer import visualizer
 from npuzzle.search import a_star_search, ida_star_search
 from npuzzle.is_solvable import is_solvable
@@ -54,9 +55,10 @@ def verbose_info(args, puzzle, solved, size_rows, size_cols):
 	for k, v in opts2.items():
 		print(color(opt_color, k), v)
 
-	print(color('blue2', 'heuristic scores for initial state'))
-	for k, v in heuristics.KV.items():
-		print(color('blue2', '  - {:10s}: {}'.format(k, v(puzzle, solved, size_rows, size_cols))))
+	# TODO make ray parallel
+	# print(color('blue2', 'heuristic scores for initial state'))
+	# for k, v in heuristics.KV.items():
+	#	print(color('blue2', '  - {:10s}: {}'.format(k, v(puzzle, solved, size_rows, size_cols))))
 
 	print(color('red2', 'search algorithm:'), 'IDA*' if args.ida else 'A*')
 
@@ -77,6 +79,12 @@ if __name__ == '__main__':
 	TRANSITION_COST = 1
 	if args.g:
 		TRANSITION_COST = 0
+
+	# Sleep a little to improve the accuracy of the timing measurements used below,
+	# because some workers may still be starting up in the background.
+	ray.init()
+	time.sleep(2.0)
+	print(color('green', 'Ray parallel packages activated, see log for details'))
 
 	HEURISTIC = heuristics.KV[args.f]
 	if args.u:
