@@ -4,5 +4,8 @@
 GAP FRAMEWORK: puzzle is solvable ?
 
 - 4 x 4 square
-puzzle := Group((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 99));
+G := SymmetricGroup(16);; Size(G);
+20922789888000
+H := SymmetricGroup(32);; Size(H);
+263130836933693530167218012160000000
 puzzle := Group((1)(2)(3)(4)(5)(6)(7)(8)(9)(10)(11)(12)(13)(14)(15)(16));
