@@ -2,12 +2,10 @@ from npuzzle import solved_states
 import ray
 
 
-@ray.remote
 def uniform_cost(puzzle, solved, size_rows, size_cols):
 	return 0
 
 
-@ray.remote
 def hamming(candidate, solved, size_rows, size_cols):  # aka tiles out of place
 	res = 0
 	for i in range(size_rows * size_cols):
@@ -16,7 +14,6 @@ def hamming(candidate, solved, size_rows, size_cols):  # aka tiles out of place
 	return res
 
 
-@ray.remote
 def gaschnig(candidate, solved, size_rows, size_cols):
 	res = 0
 	candidate = list(candidate)
@@ -36,7 +33,6 @@ def gaschnig(candidate, solved, size_rows, size_cols):
 	return res
 
 
-@ray.remote
 def manhattan(candidate, solved, size_rows, size_cols):
 	res = 0
 	size = size_rows * size_cols
@@ -49,7 +45,6 @@ def manhattan(candidate, solved, size_rows, size_cols):
 	return res
 
 
-@ray.remote
 def linear_conflicts(candidate, solved, size_rows, size_cols):
 	def count_conflicts(candidate_row, solved_row, size_rows, size_cols, ans=0):
 		size = size_rows * size_cols

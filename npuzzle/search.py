@@ -32,11 +32,51 @@ def possible_moves(data, size_rows, size_cols):
 		res.append(down)
 	return res
 
-def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+
+def ida_star_search_ray(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+	@ray.remote
 	def search(path, g, bound, evaluated):
 		evaluated += 1
 		node = path[0]
-		f = g + ray.get(HEURISTIC.remote(node, solved, size_rows, size_cols))
+		f = g + HEURISTIC(node, solved, size_rows, size_cols)
+		if f > bound:
+			return f, evaluated
+		if node == solved:
+			return True, evaluated
+		if evaluated % 500000 == 0:
+			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
+		ret = inf
+		moves = possible_moves(node, size_rows, size_cols)
+		for m in moves:
+			if m not in path:
+				path.appendleft(m)
+				t, evaluated = ray.get(search.remote(path, g + TRANSITION_COST, bound, evaluated))
+				if t is True:
+					return True, evaluated
+				if t < ret:
+					ret = t
+				path.popleft()
+		return ret, evaluated
+
+	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
+	path = deque([puzzle])
+	evaluated = 0
+	while path:
+		t, evaluated = ray.get(search.remote(path, 0, bound, evaluated))
+		if t is True:
+			path.reverse()
+			return True, path, {'space': len(path), 'time': evaluated}
+		elif t is inf:
+			return False, [], {'space': len(path), 'time': evaluated}
+		else:
+			bound = t
+
+
+def ida_star_search_seq(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+	def search(path, g, bound, evaluated):
+		evaluated += 1
+		node = path[0]
+		f = g + HEURISTIC(node, solved, size_rows, size_cols)
 		if f > bound:
 			return f, evaluated
 		if node == solved:
@@ -56,7 +96,7 @@ def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_
 				path.popleft()
 		return ret, evaluated
 
-	bound = ray.get(HEURISTIC.remote(puzzle, solved, size_rows, size_cols))
+	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
 	path = deque([puzzle])
 	evaluated = 0
 	while path:

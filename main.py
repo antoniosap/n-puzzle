@@ -5,7 +5,7 @@ import resource
 import time
 import ray
 from npuzzle.visualizer import visualizer
-from npuzzle.search import a_star_search, ida_star_search
+from npuzzle.search import a_star_search, ida_star_search_seq, ida_star_search_ray
 from npuzzle.is_solvable import is_solvable
 from npuzzle import colors
 from npuzzle.colors import color
@@ -55,10 +55,9 @@ def verbose_info(args, puzzle, solved, size_rows, size_cols):
 	for k, v in opts2.items():
 		print(color(opt_color, k), v)
 
-	# TODO make ray parallel
-	# print(color('blue2', 'heuristic scores for initial state'))
-	# for k, v in heuristics.KV.items():
-	#	print(color('blue2', '  - {:10s}: {}'.format(k, v(puzzle, solved, size_rows, size_cols))))
+	print(color('blue2', 'heuristic scores for initial state'))
+	for k, v in heuristics.KV.items():
+		print(color('blue2', '  - {:10s}: {}'.format(k, v(puzzle, solved, size_rows, size_cols))))
 
 	print(color('red2', 'search algorithm:'), 'IDA*' if args.ida else 'A*')
 
@@ -101,7 +100,7 @@ if __name__ == '__main__':
 
 	t_start = time.time()
 	if args.ida:
-		res = ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
+		res = ida_star_search_ray(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
 	else:
 		res = a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
 	t_delta = time.time() - t_start
