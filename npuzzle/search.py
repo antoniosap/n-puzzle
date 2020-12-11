@@ -7,6 +7,7 @@ import ray
 from npuzzle.colors import color
 
 EMPTY_TILE = 0
+MAX_WORKER = 10
 
 def clone_and_swap(data,y0,y1):
 	clone = list(data)
@@ -33,46 +34,17 @@ def possible_moves(data, size_rows, size_cols):
 	return res
 
 
-def ida_star_search_ray(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
-	@ray.remote
-	def search(path, g, bound, evaluated):
-		evaluated += 1
-		node = path[0]
-		f = g + HEURISTIC(node, solved, size_rows, size_cols)
-		if f > bound:
-			return f, evaluated
-		if node == solved:
-			return True, evaluated
-		if evaluated % 500000 == 0:
-			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
-		ret = inf
-		moves = possible_moves(node, size_rows, size_cols)
-		for m in moves:
-			if m not in path:
-				path.appendleft(m)
-				t, evaluated = ray.get(search.remote(path, g + TRANSITION_COST, bound, evaluated))
-				if t is True:
-					return True, evaluated
-				if t < ret:
-					ret = t
-				path.popleft()
-		return ret, evaluated
-
-	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
-	path = deque([puzzle])
-	evaluated = 0
-	while path:
-		t, evaluated = ray.get(search.remote(path, 0, bound, evaluated))
-		if t is True:
-			path.reverse()
-			return True, path, {'space': len(path), 'time': evaluated}
-		elif t is inf:
-			return False, [], {'space': len(path), 'time': evaluated}
-		else:
-			bound = t
+# ray site:
+# https://github.com/ray-project/ray/issues/3644
+#
+def n_ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+	# il primo milione di nodi sul primo worker
+	#
+	# il secondo milione di nodi parte dopo aver trasmesso il bound
+	pass
 
 
-def ida_star_search_seq(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
 	def search(path, g, bound, evaluated):
 		evaluated += 1
 		node = path[0]
@@ -93,6 +65,7 @@ def ida_star_search_seq(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSIT
 					return True, evaluated
 				if t < ret:
 					ret = t
+					print(color('green', "new min bound (1): {}".format(ret)))
 				path.popleft()
 		return ret, evaluated
 
@@ -108,6 +81,7 @@ def ida_star_search_seq(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSIT
 			return False, [], {'space': len(path), 'time': evaluated}
 		else:
 			bound = t
+			print(color('green', "new min bound (2): {}".format(bound)))
 
 def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
 	c = count()

@@ -5,7 +5,7 @@ import resource
 import time
 import ray
 from npuzzle.visualizer import visualizer
-from npuzzle.search import a_star_search, ida_star_search_seq, ida_star_search_ray
+from npuzzle.search import a_star_search, ida_star_search, n_ida_star_search
 from npuzzle.is_solvable import is_solvable
 from npuzzle import colors
 from npuzzle.colors import color
@@ -81,9 +81,9 @@ if __name__ == '__main__':
 
 	# Sleep a little to improve the accuracy of the timing measurements used below,
 	# because some workers may still be starting up in the background.
-	ray.init()
-	time.sleep(2.0)
-	print(color('green', 'Ray parallel packages activated, see log for details'))
+	#ray.init()
+	#time.sleep(2.0)
+	#print(color('green', 'Ray parallel packages activated, see log for details'))
 
 	HEURISTIC = heuristics.KV[args.f]
 	if args.u:
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
 	t_start = time.time()
 	if args.ida:
-		res = ida_star_search_ray(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
+		res = ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
 	else:
 		res = a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST)
 	t_delta = time.time() - t_start
