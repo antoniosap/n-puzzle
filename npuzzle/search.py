@@ -4,84 +4,105 @@ from heapq import heappush, heappop
 from collections import deque
 from math import inf
 import ray
+from ray.util import ActorPool
 from npuzzle.colors import color
 
 EMPTY_TILE = 0
-MAX_WORKER = 10
+MAX_ACTORS = 4
 
-def clone_and_swap(data,y0,y1):
+
+def clone_and_swap(data, y0, y1):
 	clone = list(data)
 	tmp = clone[y0]
 	clone[y0] = clone[y1]
 	clone[y1] = tmp
 	return tuple(clone)
 
+
 def possible_moves(data, size_rows, size_cols):
 	res = []
 	y = data.index(EMPTY_TILE)
 	if y % size_cols > 0:
-		left = clone_and_swap(data,y,y-1)
+		left = clone_and_swap(data, y, y - 1)
 		res.append(left)
 	if y % size_cols + 1 < size_cols:
-		right = clone_and_swap(data,y,y+1)
+		right = clone_and_swap(data, y, y + 1)
 		res.append(right)
 	if y - size_cols >= 0:
-		up = clone_and_swap(data,y,y-size_cols)
+		up = clone_and_swap(data, y, y - size_cols)
 		res.append(up)
 	if y + size_cols < len(data):
-		down = clone_and_swap(data,y,y+size_cols)
+		down = clone_and_swap(data, y, y + size_cols)
 		res.append(down)
 	return res
 
 
 # ray site:
 # https://github.com/ray-project/ray/issues/3644
+# info site:
+# https://en.wikipedia.org/wiki/Iterative_deepening_A*
+# https://github.com/asarandi/n-puzzle
 #
-def n_ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
-	# il primo milione di nodi sul primo worker
-	#
-	# il secondo milione di nodi parte dopo aver trasmesso il bound
-	pass
 
+@ray.remote
+class IdaStar:
+	def __init__(self, solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols):
+		self.solved = solved
+		self.HEURISTIC = HEURISTIC
+		self.TRANSITION_COST = TRANSITION_COST
+		self.size_rows = size_rows
+		self.size_cols = size_cols
+		self.saved_path = None
 
-def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
-	def search(path, g, bound, evaluated):
+	def get_path(self):
+		return self.saved_path
+
+	def search(self, path, g, bound, evaluated):
+		self.saved_path = path
 		evaluated += 1
 		node = path[0]
-		f = g + HEURISTIC(node, solved, size_rows, size_cols)
+		f = g + self.HEURISTIC(node, self.solved, self.size_rows, self.size_cols)
 		if f > bound:
 			return f, evaluated
-		if node == solved:
+		if node == self.solved:
 			return True, evaluated
-		if evaluated % 500000 == 0:
+		if evaluated % 250000 == 0:
 			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
 		ret = inf
-		moves = possible_moves(node, size_rows, size_cols)
+		moves = possible_moves(node, self.size_rows, self.size_cols)
 		for m in moves:
 			if m not in path:
 				path.appendleft(m)
-				t, evaluated = search(path, g + TRANSITION_COST, bound, evaluated)
+				t, evaluated = self.search(path, g + self.TRANSITION_COST, bound, evaluated)
 				if t is True:
 					return True, evaluated
 				if t < ret:
 					ret = t
-					print(color('green', "new min bound (1): {}".format(ret)))
 				path.popleft()
 		return ret, evaluated
 
+
+def pida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+	search_actors_index = 0
+	search_actors = [IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols)] * MAX_ACTORS
 	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
 	path = deque([puzzle])
 	evaluated = 0
 	while path:
-		t, evaluated = search(path, 0, bound, evaluated)
+		print(color('green', "search_actors_index: {}".format(search_actors_index)))
+		t, evaluated = ray.get(search_actors[search_actors_index].search.remote(path, 0, bound, evaluated))
 		if t is True:
+			path = ray.get(search_actors[search_actors_index].get_path.remote())
 			path.reverse()
 			return True, path, {'space': len(path), 'time': evaluated}
 		elif t is inf:
 			return False, [], {'space': len(path), 'time': evaluated}
 		else:
 			bound = t
-			print(color('green', "new min bound (2): {}".format(bound)))
+		search_actors_index += 1
+		if search_actors_index >= MAX_ACTORS:
+			search_actors_index = 0
+
 
 def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
 	c = count()
@@ -96,7 +117,7 @@ def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_CO
 				steps.append(parent)
 				parent = closed_set[parent]
 			steps.reverse()
-			return (True, steps, {'space':len(open_set), 'time':len(closed_set)})
+			return (True, steps, {'space': len(open_set), 'time': len(closed_set)})
 		if node in closed_set:
 			continue
 		closed_set[node] = parent
@@ -114,4 +135,4 @@ def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_CO
 				move_h = HEURISTIC(m, solved, size_rows, size_cols)
 			open_set[m] = tentative_g, move_h
 			heappush(queue, (move_h + tentative_g, next(c), m, tentative_g, node))
-	return (False, [], {'space':len(open_set), 'time':len(closed_set)})
+	return (False, [], {'space': len(open_set), 'time': len(closed_set)})
