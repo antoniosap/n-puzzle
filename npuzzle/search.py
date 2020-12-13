@@ -8,7 +8,6 @@ from ray.util import ActorPool
 from npuzzle.colors import color
 
 EMPTY_TILE = 0
-MAX_ACTORS = 4
 
 
 def clone_and_swap(data, y0, y1):
@@ -43,6 +42,32 @@ def possible_moves(data, size_rows, size_cols):
 # https://en.wikipedia.org/wiki/Iterative_deepening_A*
 # https://github.com/asarandi/n-puzzle
 #
+MAX_ACTORS = 4
+DELAY_BEFORE_NEW_ACTOR = 4
+
+
+@ray.remote
+class IdaGlobals:
+	def __init__(self):
+		self.search_actors = []
+		self.search_actors_index = 0
+
+	def set_search_actors(self, search_actors):
+		self.search_actors = search_actors
+
+	def get_search_actors_idx(self, i):
+		return self.search_actors[i]
+
+	def set_search_actors_index(self, i):
+		self.search_actors_index = i
+
+	def get_search_actors_index(self, i):
+		return self.search_actors_index
+
+	def inc_search_actors_index(self):
+		self.search_actors_index += 1
+		return self.search_actors_index
+
 
 @ray.remote
 class IdaStar:
@@ -53,9 +78,15 @@ class IdaStar:
 		self.size_rows = size_rows
 		self.size_cols = size_cols
 		self.saved_path = None
+		self.new_actor_request = 0
+		self.bound_min = inf
+		self.ida_globals = None
 
 	def get_path(self):
 		return self.saved_path
+
+	def set_ig(self, ig):
+		self.ida_globals = ig
 
 	def search(self, path, g, bound, evaluated):
 		self.saved_path = path
@@ -66,8 +97,18 @@ class IdaStar:
 			return f, evaluated
 		if node == self.solved:
 			return True, evaluated
-		if evaluated % 250000 == 0:
-			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
+		if evaluated % 500000 == 0:
+			print("1. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
+			self.new_actor_request += 1
+			if self.new_actor_request > DELAY_BEFORE_NEW_ACTOR:
+				self.new_actor_request = 0
+				search_actors_index += 1
+				print("3. new actor request on index: {}".format(search_actors_index))
+				if search_actors_index > MAX_ACTORS:
+					print("4. actors pool full: {}".format(search_actors_index))
+				else:
+					print(search_actors, search_actors_index)
+					search_actors[search_actors_index].search.remote(path, g, bound, evaluated)
 		ret = inf
 		moves = possible_moves(node, self.size_rows, self.size_cols)
 		for m in moves:
@@ -78,21 +119,27 @@ class IdaStar:
 					return True, evaluated
 				if t < ret:
 					ret = t
+					if ret < self.bound_min:
+						self.bound_min = ret
+						print("2. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
 				path.popleft()
 		return ret, evaluated
 
 
 def pida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
-	search_actors_index = 0
-	search_actors = [IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols)] * MAX_ACTORS
+	ig = IdaGlobals.remote()
+	sa = [IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols)] * MAX_ACTORS
+	for i in sa:
+		sa[i].set_ig.remote(ig)
+	ig.set_search_actors.remote(sa)
 	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
 	path = deque([puzzle])
 	evaluated = 0
 	while path:
 		print(color('green', "search_actors_index: {}".format(search_actors_index)))
-		t, evaluated = ray.get(search_actors[search_actors_index].search.remote(path, 0, bound, evaluated))
+		t, evaluated = ray.get(sa[search_actors_index].search.remote(path, 0, bound, evaluated))
 		if t is True:
-			path = ray.get(search_actors[search_actors_index].get_path.remote())
+			path = ray.get(sa[search_actors_index].get_path.remote())
 			path.reverse()
 			return True, path, {'space': len(path), 'time': evaluated}
 		elif t is inf:
