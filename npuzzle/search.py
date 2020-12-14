@@ -61,7 +61,7 @@ class IdaGlobals:
 	def set_search_actors_index(self, i):
 		self.search_actors_index = i
 
-	def get_search_actors_index(self, i):
+	def get_search_actors_index(self):
 		return self.search_actors_index
 
 	def inc_search_actors_index(self):
@@ -80,13 +80,13 @@ class IdaStar:
 		self.saved_path = None
 		self.new_actor_request = 0
 		self.bound_min = inf
-		self.ida_globals = None
+		self.ig = None
 
 	def get_path(self):
 		return self.saved_path
 
 	def set_ig(self, ig):
-		self.ida_globals = ig
+		self.ig = ig
 
 	def search(self, path, g, bound, evaluated):
 		self.saved_path = path
@@ -102,7 +102,7 @@ class IdaStar:
 			self.new_actor_request += 1
 			if self.new_actor_request > DELAY_BEFORE_NEW_ACTOR:
 				self.new_actor_request = 0
-				search_actors_index += 1
+				search_actors_index = ray.get(self.ig.inc_search_actors_index.remote())
 				print("3. new actor request on index: {}".format(search_actors_index))
 				if search_actors_index > MAX_ACTORS:
 					print("4. actors pool full: {}".format(search_actors_index))
@@ -129,9 +129,10 @@ class IdaStar:
 def pida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
 	ig = IdaGlobals.remote()
 	sa = [IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols)] * MAX_ACTORS
-	for i in sa:
-		sa[i].set_ig.remote(ig)
+	for ac in sa:
+		ac.set_ig.remote(ig)
 	ig.set_search_actors.remote(sa)
+	search_actors_index = ray.get(ig.get_search_actors_index.remote())
 	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
 	path = deque([puzzle])
 	evaluated = 0
