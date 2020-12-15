@@ -55,8 +55,11 @@ class IdaGlobals:
 	def set_search_actors(self, search_actors):
 		self.search_actors = search_actors
 
-	def get_search_actors_idx(self, i):
+	def get_search_actors_i(self, i):
 		return self.search_actors[i]
+
+	def get_search_actors(self):
+		return self.search_actors
 
 	def set_search_actors_index(self, i):
 		self.search_actors_index = i
@@ -81,12 +84,14 @@ class IdaStar:
 		self.new_actor_request = 0
 		self.bound_min = inf
 		self.ig = None
+		self.sa = None
 
 	def get_path(self):
 		return self.saved_path
 
 	def set_ig(self, ig):
 		self.ig = ig
+		self.sa = ray.get(self.ig.get_search_actors.remote())
 
 	def search(self, path, g, bound, evaluated):
 		self.saved_path = path
@@ -98,17 +103,18 @@ class IdaStar:
 		if node == self.solved:
 			return True, evaluated
 		if evaluated % 500000 == 0:
-			print("1. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
+			print("2. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
 			self.new_actor_request += 1
 			if self.new_actor_request > DELAY_BEFORE_NEW_ACTOR:
 				self.new_actor_request = 0
-				search_actors_index = ray.get(self.ig.inc_search_actors_index.remote())
+				search_actors_index = ray.get(self.ig.get_search_actors_index.remote()) + 1
 				print("3. new actor request on index: {}".format(search_actors_index))
-				if search_actors_index > MAX_ACTORS:
+				if search_actors_index >= MAX_ACTORS:
 					print("4. actors pool full: {}".format(search_actors_index))
 				else:
-					print(search_actors, search_actors_index)
-					search_actors[search_actors_index].search.remote(path, g, bound, evaluated)
+					search_actors_index = ray.get(self.ig.inc_search_actors_index.remote())
+					print("4. new actor {} starting...".format(search_actors_index))
+					self.sa[search_actors_index].search.remote(path, g, bound, 0)
 		ret = inf
 		moves = possible_moves(node, self.size_rows, self.size_cols)
 		for m in moves:
@@ -121,14 +127,16 @@ class IdaStar:
 					ret = t
 					if ret < self.bound_min:
 						self.bound_min = ret
-						print("2. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
+						print("1. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
 				path.popleft()
 		return ret, evaluated
 
 
 def pida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
 	ig = IdaGlobals.remote()
-	sa = [IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols)] * MAX_ACTORS
+	sa = []
+	for i in range(MAX_ACTORS):
+		sa.append(IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols))
 	for ac in sa:
 		ac.set_ig.remote(ig)
 	ig.set_search_actors.remote(sa)
