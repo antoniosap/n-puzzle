@@ -46,118 +46,42 @@ MAX_ACTORS = 4
 DELAY_BEFORE_NEW_ACTOR = 4
 
 
-@ray.remote
-class IdaGlobals:
-	def __init__(self):
-		self.search_actors = []
-		self.search_actors_index = 0
-
-	def set_search_actors(self, search_actors):
-		self.search_actors = search_actors
-
-	def get_search_actors_i(self, i):
-		return self.search_actors[i]
-
-	def get_search_actors(self):
-		return self.search_actors
-
-	def set_search_actors_index(self, i):
-		self.search_actors_index = i
-
-	def get_search_actors_index(self):
-		return self.search_actors_index
-
-	def inc_search_actors_index(self):
-		self.search_actors_index += 1
-		return self.search_actors_index
-
-
-@ray.remote
-class IdaStar:
-	def __init__(self, solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols):
-		self.solved = solved
-		self.HEURISTIC = HEURISTIC
-		self.TRANSITION_COST = TRANSITION_COST
-		self.size_rows = size_rows
-		self.size_cols = size_cols
-		self.saved_path = None
-		self.new_actor_request = 0
-		self.bound_min = inf
-		self.ig = None
-		self.sa = None
-
-	def get_path(self):
-		return self.saved_path
-
-	def set_ig(self, ig):
-		self.ig = ig
-		self.sa = ray.get(self.ig.get_search_actors.remote())
-
-	def search(self, path, g, bound, evaluated):
-		self.saved_path = path
+def ida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
+	def search(path, g, bound, evaluated):
 		evaluated += 1
 		node = path[0]
-		f = g + self.HEURISTIC(node, self.solved, self.size_rows, self.size_cols)
+		f = g + HEURISTIC(node, solved, size_rows, size_cols)
 		if f > bound:
 			return f, evaluated
-		if node == self.solved:
+		if node == solved:
 			return True, evaluated
 		if evaluated % 500000 == 0:
-			print("2. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
-			self.new_actor_request += 1
-			if self.new_actor_request > DELAY_BEFORE_NEW_ACTOR:
-				self.new_actor_request = 0
-				search_actors_index = ray.get(self.ig.get_search_actors_index.remote()) + 1
-				print("3. new actor request on index: {}".format(search_actors_index))
-				if search_actors_index >= MAX_ACTORS:
-					print("4. actors pool full: {}".format(search_actors_index))
-				else:
-					search_actors_index = ray.get(self.ig.inc_search_actors_index.remote())
-					print("4. new actor {} starting...".format(search_actors_index))
-					self.sa[search_actors_index].search.remote(path, g, bound, 0)
+			print(color('yellow', "bound: {} evaluated: {}".format(bound, evaluated)))
 		ret = inf
-		moves = possible_moves(node, self.size_rows, self.size_cols)
+		moves = possible_moves(node, size_rows, size_cols)
 		for m in moves:
 			if m not in path:
 				path.appendleft(m)
-				t, evaluated = self.search(path, g + self.TRANSITION_COST, bound, evaluated)
+				t, evaluated = search(path, g + TRANSITION_COST, bound, evaluated)
 				if t is True:
 					return True, evaluated
 				if t < ret:
 					ret = t
-					if ret < self.bound_min:
-						self.bound_min = ret
-						print("1. bound_min: {} evaluated: {}".format(self.bound_min, evaluated))
 				path.popleft()
 		return ret, evaluated
 
-
-def pida_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
-	ig = IdaGlobals.remote()
-	sa = []
-	for i in range(MAX_ACTORS):
-		sa.append(IdaStar.remote(solved, HEURISTIC, TRANSITION_COST, size_rows, size_cols))
-	for ac in sa:
-		ac.set_ig.remote(ig)
-	ig.set_search_actors.remote(sa)
-	search_actors_index = ray.get(ig.get_search_actors_index.remote())
 	bound = HEURISTIC(puzzle, solved, size_rows, size_cols)
 	path = deque([puzzle])
 	evaluated = 0
 	while path:
-		print(color('green', "search_actors_index: {}".format(search_actors_index)))
-		t, evaluated = ray.get(sa[search_actors_index].search.remote(path, 0, bound, evaluated))
+		t, evaluated = search(path, 0, bound, evaluated)
 		if t is True:
-			path = ray.get(sa[search_actors_index].get_path.remote())
 			path.reverse()
 			return True, path, {'space': len(path), 'time': evaluated}
 		elif t is inf:
 			return False, [], {'space': len(path), 'time': evaluated}
 		else:
 			bound = t
-		search_actors_index += 1
-		if search_actors_index >= MAX_ACTORS:
-			search_actors_index = 0
 
 
 def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_COST):
@@ -191,4 +115,4 @@ def a_star_search(puzzle, solved, size_rows, size_cols, HEURISTIC, TRANSITION_CO
 				move_h = HEURISTIC(m, solved, size_rows, size_cols)
 			open_set[m] = tentative_g, move_h
 			heappush(queue, (move_h + tentative_g, next(c), m, tentative_g, node))
-	return (False, [], {'space': len(open_set), 'time': len(closed_set)})
+	return False, [], {'space': len(open_set), 'time': len(closed_set)}
