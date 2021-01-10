@@ -1,5 +1,5 @@
 from npuzzle import solved_states
-import ray
+# import ray
 
 
 def uniform_cost(puzzle, solved, size_rows, size_cols):

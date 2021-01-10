@@ -3,7 +3,7 @@
 import sys
 import resource
 import time
-import ray
+# import ray
 from npuzzle.visualizer import visualizer
 from npuzzle.search import a_star_search, ida_star_search
 from npuzzle.is_solvable import is_solvable

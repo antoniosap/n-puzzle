@@ -1,2 +1,5 @@
+# conda install python=3.6
 tkintertable
 progress
+# conda install -c conda-forge pypy3.6
+# conda install -c bioconda ray

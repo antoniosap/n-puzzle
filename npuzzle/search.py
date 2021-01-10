@@ -3,8 +3,8 @@ from itertools import count
 from heapq import heappush, heappop
 from collections import deque
 from math import inf
-import ray
-from ray.util import ActorPool
+# import ray
+# from ray.util import ActorPool
 from npuzzle.colors import color
 
 EMPTY_TILE = 0
